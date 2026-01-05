@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Jogo do Casal 🎮</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      margin: 0;
+      padding: 20px;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #38bdf8;
+    }
+    .card {
+      background: #020617;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,.4);
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border-radius: 6px;
+      border: none;
+    }
+    button {
+      background: #38bdf8;
+      color: #020617;
+      font-weight: bold;
+      margin-top: 15px;
+      cursor: pointer;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .highlight {
+      font-size: 20px;
+      text-align: center;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🎮 Jogo do Casal – Modo Videogame</h1>
+
+<div class="card">
+  <h2>📅 Registro Diário</h2>
+
+  <label>Jogador</label>
+  <select id="player">
+    <option>Jogador A</option>
+    <option>Jogador B</option>
+  </select>
+
+  <label>Horas estudadas</label>
+  <input type="number" id="hours" min="0" step="0.5">
+
+  <label>Questões feitas</label>
+  <input type="number" id="questions" min="0">
+
+  <label>Exercício</label>
+  <select id="exercise">
+    <option>Nenhum</option>
+    <option>Leve</option>
+    <option>Completo</option>
+  </select>
+
+  <label>
+    <input type="checkbox" id="diet"> Dia dentro da dieta
+  </label>
+
+  <label>
+    <input type="checkbox" id="economy"> Economizou dinheiro
+  </label>
+
+  <label>
+    <input type="checkbox" id="convince"> Convenceu o outro
+  </label>
+
+  <button onclick="registerDay()">Registrar Dia</button>
+
+  <div class="highlight" id="dailyResult"></div>
+</div>
+
+<div class="row">
+  <div class="card">
+    <h2>🏆 Ranking</h2>
+    <p>Jogador A: <span id="scoreA">0</span></p>
+    <p>Jogador B: <span id="scoreB">0</span></p>
+    <hr>
+    <p><strong>❤️ Pontuação do Casal:</strong> <span id="coop">0</span></p>
+  </div>
+
+  <div class="card">
+    <h2>🔥 Streak</h2>
+    <p>Jogador A: <span id="streakA">0</span> dias</p>
+    <p>Jogador B: <span id="streakB">0</span> dias</p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>📊 Evolução</h2>
+  <canvas id="chart"></canvas>
+</div>
+
+<script>
+  const META_HORAS = 2;
+  const META_QUESTOES = 30;
+
+  let scores = { A: 0, B: 0 };
+  let streaks = { A: 0, B: 0 };
+  let history = [];
+
+  const ctx = document.getElementById("chart").getContext("2d");
+  const chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [
+        { label: "Jogador A", data: [], borderColor: "#38bdf8" },
+        { label: "Jogador B", data: [], borderColor: "#22c55e" }
+      ]
+    }
+  });
+
+  function registerDay() {
+    const player = document.getElementById("player").value === "Jogador A" ? "A" : "B";
+    const hours = +document.getElementById("hours").value;
+    const questions = +document.getElementById("questions").value;
+    const exercise = document.getElementById("exercise").value;
+    const diet = document.getElementById("diet").checked;
+    const economy = document.getElementById("economy").checked;
+    const convince = document.getElementById("convince").checked;
+
+    let points = 0;
+
+    // 🔒 Trava anti-preguiça
+    if (hours < META_HORAS) {
+      streaks[player] = 0;
+      document.getElementById("dailyResult").innerText =
+        "❌ Não bateu a meta de estudo. Pontuação do dia: 0";
+      updateUI();
+      return;
+    }
+
+    // 📚 Estudos
+    points += 20;
+    if (hours >= META_HORAS * 1.5) points += 10;
+
+    if (questions >= META_QUESTOES) points += 10;
+    if (questions >= META_QUESTOES * 1.5) points += 5;
+
+    // 🏃 Exercícios
+    if (exercise === "Leve") points += 8;
+    if (exercise === "Completo") points += 15;
+
+    // 🥗 Dieta
+    if (diet) points += 10;
+
+    // 💰 Economia
+    if (economy) points += 10;
+
+    // 💤 Procrastinação
+    if (convince) points += 20;
+
+    // 🔥 Streak
+    streaks[player]++;
+    points += streaks[player] * 5;
+
+    scores[player] += points;
+    history.push({ player, points });
+
+    document.getElementById("dailyResult").innerText =
+      `✅ Pontos do dia: ${points}`;
+
+    updateChart();
+    updateUI();
+  }
+
+  function updateUI() {
+    document.getElementById("scoreA").innerText = scores.A;
+    document.getElementById("scoreB").innerText = scores.B;
+    document.getElementById("coop").innerText = scores.A + scores.B;
+    document.getElementById("streakA").innerText = streaks.A;
+    document.getElementById("streakB").innerText = streaks.B;
+  }
+
+  function updateChart() {
+    chart.data.labels.push(`Dia ${chart.data.labels.length + 1}`);
+    chart.data.datasets[0].data.push(scores.A);
+    chart.data.datasets[1].data.push(scores.B);
+    chart.update();
+  }
+</script>
+
+</body>
+</html>
